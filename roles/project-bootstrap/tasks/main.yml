@@ -78,9 +78,9 @@
   register: ocp_users_create
   when: ocp_project_exists.status == 404 or ocp_project_exists.status == 200 
 
-- name: Assign quota and limit files
+- name: Assign limit templates
   uri:
-    url: "{{ ocp_api_url }}/api/v1/namespaces/{{ ocp_project_name }}/resourcequotas"
+    url: "{{ ocp_api_url }}/api/v1/namespaces/{{ ocp_project_name }}/limitranges"
     headers:
       Authorization: "Bearer {{ ocp_api_token }}"
       Accept: application/json
@@ -88,7 +88,7 @@
     method: POST
     body_format: json
     body: |
-      {{ lookup('file', item) | from_yaml | to_json }}
+      {{ lookup('template', item) | from_yaml | to_json }}
     validate_certs: no
     status_code:
       - 200
@@ -97,9 +97,10 @@
   register: ocp_quotas_create
   when: ocp_project_exists.status == 404 or ocp_project_exists.status == 200
   with_fileglob:
-    - "/tmp/bootstrap/files/quotas/*.yaml"
+    - "/tmp/bootstrap/files/limits/*.yaml"
+    - "/tmp/bootstrap/templates/limits/*.j2"
 
-- name: Assign quota and limit templates
+- name: Assign quota templates
   uri:
     url: "{{ ocp_api_url }}/api/v1/namespaces/{{ ocp_project_name }}/resourcequotas"
     headers:
@@ -119,5 +120,6 @@
   when: ocp_project_exists.status == 404 or ocp_project_exists.status == 200
   with_fileglob:
     - "/tmp/bootstrap/templates/quotas/*.j2"
+    - "/tmp/bootstrap/files/quotas/*.yaml"
 
 
