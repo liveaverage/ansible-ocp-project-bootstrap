@@ -2,6 +2,7 @@
 - hosts: localhost
   connection: local
   vars:
+    project_limits_memory: 2Gi
     git_repo: "ssh://git@192.168.1.55:10022/liveaverage/ocp-project-quota.git"
     git_keyfile: "~/.ssh/id_rsa"
     ocp_api_url: "https://127.0.0.1:8443"
@@ -10,7 +11,8 @@
     ocp_project_name_display: "This is a Test"
     ocp_project_requester: "project-user"
     ocp_project_description: "Provisioned by Ansible"
-    ocp_project_users:
-      - "developer"
+    ocp_project_admin_users:
+      - developer
+      - administrator
   roles:
     - project-bootstrap  

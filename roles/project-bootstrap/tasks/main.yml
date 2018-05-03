@@ -23,7 +23,7 @@
 
 - name: Create new OCP project
   uri:
-    url: "{{ ocp_api_url }}/apis/project.openshift.io/v1/projects"
+    url: "{{ ocp_api_url }}/apis/project.openshift.io/v1/projectrequests"
     headers:
       Authorization: "Bearer {{ ocp_api_token }}"
       Accept: application/json
@@ -32,14 +32,13 @@
     body_format: json
     body: |
       {
-        "kind": "Project",
+        "kind": "ProjectRequest",
         "apiVersion": "project.openshift.io/v1",
         "metadata": {
           "name": "{{ ocp_project_name }}",
-          "openshift.io/description": "{{ ocp_project_description }}",
-          "openshift.io/display-name": "{{ ocp_project_name_display }}",
-          "openshift.io/requester": "{{ ocp_project_requester }}",
-        }
+        },
+        "description": "{{ ocp_project_description }}",
+        "displayName": "{{ ocp_project_name_display }}"
           
       }
     validate_certs: no
@@ -48,6 +47,8 @@
       - 201
   register: ocp_project_create
   when: ocp_project_exists.status == 404
+
+### For groups: "groupNames": {{ ocp_project_admin_groups | default("null") | to_json }}
 
 - name: Create user rolebinding
   uri:
@@ -66,7 +67,7 @@
           "name":"admin",
           "namespace":"{{ ocp_project_name }}"
         },
-        "userNames": ["developer"],
+        "userNames": {{ ocp_project_admin_users | to_json }},
         "roleRef": {"name": "admin"}
       }
     validate_certs: no
@@ -76,5 +77,47 @@
       - 409
   register: ocp_users_create
   when: ocp_project_exists.status == 404 or ocp_project_exists.status == 200 
+
+- name: Assign quota and limit files
+  uri:
+    url: "{{ ocp_api_url }}/api/v1/namespaces/{{ ocp_project_name }}/resourcequotas"
+    headers:
+      Authorization: "Bearer {{ ocp_api_token }}"
+      Accept: application/json
+      Content-Type: application/json
+    method: POST
+    body_format: json
+    body: |
+      {{ lookup('file', item) | from_yaml | to_json }}
+    validate_certs: no
+    status_code:
+      - 200
+      - 201
+      - 409
+  register: ocp_quotas_create
+  when: ocp_project_exists.status == 404 or ocp_project_exists.status == 200
+  with_fileglob:
+    - "/tmp/bootstrap/files/quotas/*.yaml"
+
+- name: Assign quota and limit templates
+  uri:
+    url: "{{ ocp_api_url }}/api/v1/namespaces/{{ ocp_project_name }}/resourcequotas"
+    headers:
+      Authorization: "Bearer {{ ocp_api_token }}"
+      Accept: application/json
+      Content-Type: application/json
+    method: POST
+    body_format: json
+    body: |
+      {{ lookup('template', item) | from_yaml | to_json }}
+    validate_certs: no
+    status_code:
+      - 200
+      - 201
+      - 409
+  register: ocp_quotas_create
+  when: ocp_project_exists.status == 404 or ocp_project_exists.status == 200
+  with_fileglob:
+    - "/tmp/bootstrap/templates/quotas/*.j2"
 
 
