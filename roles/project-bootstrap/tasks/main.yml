@@ -1,0 +1,80 @@
+---
+# tasks file for project-bootstrap
+
+- name: Clone or refresh project quota templates
+  git:
+    repo: "{{ git_repo }}"
+    dest: "/tmp/bootstrap"
+    key_file: "{{ git_keyfile }}"
+    accept_hostkey: yes
+
+- name: Check if OCP project exists
+  uri:
+    url: "{{ ocp_api_url }}/apis/project.openshift.io/v1/projects/{{ ocp_project_name }}"
+    headers:
+      Authorization: "Bearer {{ ocp_api_token }}"
+      Accept: application/json
+    method: GET
+    validate_certs: no
+    status_code:
+      - 200
+      - 404
+  register: ocp_project_exists
+
+- name: Create new OCP project
+  uri:
+    url: "{{ ocp_api_url }}/apis/project.openshift.io/v1/projects"
+    headers:
+      Authorization: "Bearer {{ ocp_api_token }}"
+      Accept: application/json
+      Content-Type: application/json
+    method: POST
+    body_format: json
+    body: |
+      {
+        "kind": "Project",
+        "apiVersion": "project.openshift.io/v1",
+        "metadata": {
+          "name": "{{ ocp_project_name }}",
+          "openshift.io/description": "{{ ocp_project_description }}",
+          "openshift.io/display-name": "{{ ocp_project_name_display }}",
+          "openshift.io/requester": "{{ ocp_project_requester }}",
+        }
+          
+      }
+    validate_certs: no
+    status_code:
+      - 200
+      - 201
+  register: ocp_project_create
+  when: ocp_project_exists.status == 404
+
+- name: Create user rolebinding
+  uri:
+    url: "{{ ocp_api_url }}/apis/authorization.openshift.io/v1/namespaces/{{ ocp_project_name }}/rolebindings"
+    headers:
+      Authorization: "Bearer {{ ocp_api_token }}"
+      Accept: application/json
+      Content-Type: application/json
+    method: POST
+    body_format: json
+    body: |
+      {
+        "kind": "RoleBinding",
+        "apiVersion": "authorization.openshift.io/v1",
+        "metadata": {
+          "name":"admin",
+          "namespace":"{{ ocp_project_name }}"
+        },
+        "userNames": ["developer"],
+        "roleRef": {"name": "admin"}
+      }
+    validate_certs: no
+    status_code:
+      - 200
+      - 201
+      - 409
+  register: ocp_users_create
+  when: ocp_project_exists.status == 404 or ocp_project_exists.status == 200 
+
+
