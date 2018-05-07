@@ -19,3 +19,11 @@ oc get secret | grep sa-projectmgr-dockercfg | tail -1 | \
 	python -c 'import sys, json; print json.load(sys.stdin)["metadata"]["annotations"]["openshift.io/token-secret.value"]' > ~/.token
 
 ```
+
+## Override parameters on execution
+
+List variable overrides require wrapping in valid JSON:
+
+```
+ansible-playbook site.yaml -e '{"ocp_project_admin_users":["test1","test2"]}'
+```
