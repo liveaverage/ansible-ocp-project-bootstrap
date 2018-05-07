@@ -50,14 +50,36 @@
 
 ### For groups: "groupNames": {{ ocp_project_admin_groups | default("null") | to_json }}
 
+- name: Get user rolebinding
+  uri:
+    url: "{{ ocp_api_url }}/apis/authorization.openshift.io/v1/namespaces/{{ ocp_project_name }}/rolebindings/admin"
+    headers:
+      Authorization: "Bearer {{ ocp_api_token }}"
+      Accept: application/json
+    method: GET
+    validate_certs: no
+    status_code:
+      - 200
+      - 201
+      - 409
+  register: ocp_users_list
+  when: ocp_project_exists.status == 404 or ocp_project_exists.status == 200
+
+- debug: var=ocp_users_list.json
+
+- set_fact:
+    joined_project_admin_users: "{{ ocp_users_list.json.userNames }} + {{ ocp_project_admin_users }}"
+
+- debug: var=joined_project_admin_users
+
 - name: Create user rolebinding
   uri:
-    url: "{{ ocp_api_url }}/apis/authorization.openshift.io/v1/namespaces/{{ ocp_project_name }}/rolebindings"
+    url: "{{ ocp_api_url }}/apis/authorization.openshift.io/v1/namespaces/{{ ocp_project_name }}/rolebindings/admin"
     headers:
       Authorization: "Bearer {{ ocp_api_token }}"
       Accept: application/json
       Content-Type: application/json
-    method: POST
+    method: PUT
     body_format: json
     body: |
       {
@@ -67,7 +89,7 @@
           "name":"admin",
           "namespace":"{{ ocp_project_name }}"
         },
-        "userNames": {{ ocp_project_admin_users | to_json }},
+        "userNames": {{ joined_project_admin_users | unique | to_json }},
         "roleRef": {"name": "admin"}
       }
     validate_certs: no

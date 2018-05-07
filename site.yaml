@@ -12,6 +12,8 @@
     ocp_project_requester: "project-user"
     ocp_project_description: "Provisioned by Ansible"
     ocp_project_admin_users:
+      - test2
+      - tester
       - developer
       - administrator
   roles:
