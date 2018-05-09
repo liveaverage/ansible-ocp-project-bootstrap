@@ -2,7 +2,7 @@
 # tasks file for project-bootstrap
 
 - name: Load private key into memory
-  shell: "eval `ssh-agent -s`; shopt -s xpg_echo; echo '{{ git_keyfile }}' | ssh-add -"
+  shell: " {{ git_keyfile }} | ssh-add -"
   changed_when: false
 
 - name: Clone or refresh project quota templates
