@@ -1,10 +1,6 @@
 ---
 # tasks file for project-bootstrap
 
-- name: Load private key into memory
-  shell: "eval `ssh-agent -s`; shopt -s xpg_echo; echo '{{ git_keyfile }}' | ssh-add -"
-  changed_when: false
-
 - name: Clone or refresh project quota templates
   git:
     repo: "{{ git_repo }}"
@@ -71,7 +67,7 @@
 - debug: var=ocp_users_list.json
 
 - set_fact:
-    joined_project_admin_users: "{{ ocp_users_list.json.userNames }} + {{ ocp_project_admin_users }}"
+    joined_project_admin_users: "{{ ocp_users_list.json.userNames }} + {{ ocp_project_admin_users.split(',') }}"
 
 - debug: var=joined_project_admin_users
 
